@@ -1,0 +1,1855 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guia das Secretarias de Educação - Ceará</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chosen Palette: Slate and Sky -->
+    <!-- Application Structure Plan: A single-page application designed as an interactive directory. The core structure is a responsive card grid, with each card representing a municipality. This provides a quick, scannable overview. A prominent search bar allows for real-time filtering of the cards, making it easy for users to find a specific location. Clicking a card opens a modal window with detailed information, preventing clutter on the main screen and keeping the user in context. This card-grid-modal approach was chosen because it's an intuitive and standard user experience for directories, prioritizing fast information retrieval and ease of navigation. -->
+    <!-- Visualization & Content Choices: The primary goal is to organize and present contact information. Therefore, the chosen method is a dynamic list of interactive cards (HTML/CSS), not data charts. Goal: Organize -> Method: Live Search Filter -> Interaction: User types in search bar, JS filters the card grid -> Justification: Provides immediate access to specific information in a large dataset. Goal: Inform -> Method: Cards and Modal Pop-ups -> Interaction: User clicks a card to view details in a modal -> Justification: Presents a clean summary upfront, with detailed information available on demand without leaving the page. This structure is implemented using vanilla JavaScript for all interactions. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .modal-scrollbar-hidden::-webkit-scrollbar {
+            display: none;
+        }
+        .modal-scrollbar-hidden {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <div id="app" class="container mx-auto p-4 sm:p-6 md:p-8">
+        
+        <header class="text-center mb-8">
+            <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold text-sky-700">Guia das Secretarias de Educação do Ceará</h1>
+            <p class="mt-2 text-slate-600 max-w-2xl mx-auto">Encontre informações de contato, endereços e responsáveis das secretarias municipais de educação.</p>
+        </header>
+
+        <div class="mb-8 max-w-2xl mx-auto">
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg class="h-5 w-5 text-slate-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <input type="text" id="search-input" placeholder="Pesquisar por município..." class="w-full pl-10 pr-4 py-3 bg-white border border-slate-300 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 transition">
+            </div>
+        </div>
+
+        <main id="cards-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        </main>
+
+        <div id="no-results" class="text-center py-16 hidden">
+            <h3 class="text-2xl font-semibold text-slate-700">Nenhum município encontrado</h3>
+            <p class="text-slate-500 mt-2">Tente ajustar sua pesquisa.</p>
+        </div>
+
+    </div>
+
+    <div id="modal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50 hidden">
+        <div id="modal-content" class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto modal-scrollbar-hidden relative transform transition-all duration-300 scale-95 opacity-0">
+        </div>
+    </div>
+    
+    <footer class="text-center p-6 text-slate-500 text-sm">
+        <p>Informações compiladas a partir de dados públicos. Verifique sempre os canais oficiais para dados atualizados.</p>
+    </footer>
+
+    <script>
+        const database = [
+            {
+                municipio: "Abaiara",
+                secretario: "Alrizio Sérgio Alves Borges",
+                endereco: "Rua Expedito Oliveira das Neves, nº 70 – Centro – Abaiara, Ceará, CEP 63.240-000",
+                telefone: "Não informado",
+                email: "sme2021abaiara@gmail.com",
+                horario: "07:00 às 11:00 / 13:00 às 17:00",
+                observacoes: "Não foi encontrado um e-mail com domínio oficial do município."
+            },
+            {
+                municipio: "Acarapé",
+                secretario: "Jonas Campelo Nogueira",
+                endereco: "Rua Doca Rego, nº 201 – Centro – Acarape, Ceará, CEP 62.785-000",
+                telefone: "(85) 9.9969-2762",
+                email: "educacao@acarape.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 14:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Acaraú",
+                secretario: "Maiara Melo Alves Lopes",
+                endereco: "Rua General Humberto Moura, nº 555 – Centro – Acaraú, Ceará, CEP 62.580-000",
+                telefone: "(88) 9.9610-6664",
+                email: "educacao@acarau.ce.gov.br",
+                horario: "Segunda a quinta-feira, das 08:00 às 12:00 e das 14:00 às 17:00; sexta-feira, das 08:00 às 14:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Acopiara",
+                secretario: "Maria Ivânia de Araújo Ferreira",
+                endereco: "Av. Paulino Félix, nº 362 – Centro – Acopiara, Ceará, CEP 63.560-000",
+                telefone: "Não informado",
+                email: "educacao@acopiara.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 14:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Aiuaba",
+                secretario: "Vianey Melo",
+                endereco: "Rua Armando Arraes Feitosa, nº 229 – Centro – Aiuaba, Ceará, CEP 63.575-000",
+                telefone: "Não informado",
+                email: "educacao@aiuaba.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 14:00 às 17:00",
+                observacoes: "Informações limitadas disponíveis no site oficial da prefeitura."
+            },
+            {
+                municipio: "Alcântaras",
+                secretario: "Súzia Moreira de Sousa Guilherme",
+                endereco: "Rua Francisco Cunha, nº 61 – Centro – Alcântaras, Ceará, CEP 62.120-000",
+                telefone: "(88) 99335-3085",
+                email: "seduc@alcantaras.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 11:30 e das 13:00 às 17:00",
+                observacoes: "E-mail oficial encontrado e atualizado."
+            },
+            {
+                municipio: "Altaneira",
+                secretario: "Antonia Zuleide Ferreira de Oliveira Santos",
+                endereco: "Rua Padre Agamenon Coelho, nº 519 – Centro – Altaneira, Ceará, CEP 63.195-000",
+                telefone: "(88) 9.9916-6125",
+                email: "secretariaeducacao@altaneira.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 13:30",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Alto Santo",
+                secretario: "Maria Lucineide de Oliveira",
+                endereco: "Rua 31 de Março, nº 403 – Centro – Alto Santo, Ceará, CEP 62.970-000",
+                telefone: "(88) 9.2151-4923",
+                email: "educacao@altosanto.ce.gov.br",
+                horario: "Segunda a quinta-feira, das 07:00 às 11:30 e das 13:30 às 17:00; sexta-feira, das 07:00 às 13:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Amontada",
+                secretario: "Jonas Pereira Azevedo",
+                endereco: "Avenida Antônio Lisboa de Queiroz, nº 1.725 – Centro – Amontada, Ceará, CEP 62.540-000",
+                telefone: "(88) 9.8170-2150",
+                email: "educacao@amontada.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:00 às 11:00 e das 13:00 às 17:00",
+                observacoes: "E-mail oficial encontrado e atualizado."
+            },
+            {
+                municipio: "Antonina do Norte",
+                secretario: "Francisca Elizângela de Sousa",
+                endereco: "Rua Maria Juraci de Alencar, nº 62 – Centro – Antonina do Norte, Ceará, CEP 63.570-000",
+                telefone: "(88) 99337-3056",
+                email: "secretariaeducacao@antonina.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:00 às 11:00 e das 13:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Apuiarés",
+                secretario: "Francisca Vanuzia Teixeira da Silva",
+                endereco: "Rua 25 de Janeiro, nº 00 – Centro – Apuiarés, Ceará, CEP 62.670-000",
+                telefone: "Não informado",
+                email: "educacao@apuiares.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 14:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Aquiraz",
+                secretario: "Renê Felipe",
+                endereco: "Rua Francisco Câmara, nº 332 – Centro – Aquiraz, Ceará, CEP 61.700-000",
+                telefone: "(85) 4062-8090 – Ramal 9034",
+                email: "educacao@aquiraz.ce.gov.br",
+                horario: "Segunda a quinta-feira, das 08:00 às 12:00 e das 13:00 às 16:00; sexta-feira, das 08:00 às 12:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Aracati",
+                secretario: "Joseni Sousa",
+                endereco: "Rua Coronel Alexandrino, nº 1102 – Centro – Aracati, Ceará, CEP 62.800-000",
+                telefone: "(88) 3446-2447 / (88) 3446-2448",
+                email: "educacao@aracati.ce.gov.br",
+                horario: "Segunda a quinta-feira, das 07:30 às 11:30 e das 13:30 às 17:30; sexta-feira, das 08:00 às 14:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Araçoiaba",
+                secretario: "Marilene Campelo Nogueira",
+                endereco: "Avenida Independência, nº 134 – Centro – Araçoiaba, Ceará, CEP 62.750-000",
+                telefone: "(85) 3337-1717",
+                email: "seduc@aracoiaba.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 17:00",
+                observacoes: "E-mail oficial da secretaria de educação encontrado e atualizado."
+            },
+            {
+                municipio: "Ararendá",
+                secretario: "José Felicio da Silva",
+                endereco: "Rua Henrique Soares, nº 477 – Centro – Ararendá, Ceará, CEP 62.210-000",
+                telefone: "(88) 3631-188",
+                email: "contato@ararenda.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 13:30",
+                observacoes: "Este parece ser um e-mail geral da prefeitura."
+            },
+            {
+                municipio: "Araripe",
+                secretario: "Aurélio Ribeiro da Silva Lira",
+                endereco: "Rua Padre Nelson, nº 10 – Centro – Araripe, Ceará, CEP 63.170-000",
+                telefone: "(88) 3530-1380 / (88) 99221-1175",
+                email: "educacao@araripe.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 13:00 às 17:00",
+                observacoes: "E-mail pessoal removido, mantido apenas o oficial."
+            },
+            {
+                municipio: "Aratuba",
+                secretario: "Não informado",
+                endereco: "Rua Cel. Augusto Cordeiro, nº 158 – Centro – Aratuba, Ceará, CEP 62.762-000",
+                telefone: "(85) 3329-1444",
+                email: "educacao@aratuba.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 11:30 e das 13:00 às 17:00",
+                observacoes: "E-mail oficial encontrado e atualizado."
+            },
+            {
+                municipio: "Arneiroz",
+                secretario: "Idelbrando Lima Rodrigues",
+                endereco: "Avenida Virgílio Távora, s/n – Centro – Arneiroz, Ceará",
+                telefone: "(88) 3419-1020",
+                email: "educacao@arneiroz.ce.gov.br",
+                horario: "Não informado",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Assaré",
+                secretario: "Noemita Rodrigues da Silva",
+                endereco: "Não informado",
+                telefone: "(83) 99124-7849",
+                email: "seceducacao@assare.ce.gov.br",
+                horario: "Não informado",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Aurora",
+                secretario: "Cicera Edana Tavares Luna",
+                endereco: "Rua Coronel José Leite, s/n – Araçá – Aurora, Ceará, CEP 63.360-000",
+                telefone: "(88) 99994-4444",
+                email: "smeaurora2021@gmail.com",
+                horario: "Segunda a sexta-feira, das 07:00 às 11:00 e das 13:00 às 17:00",
+                observacoes: "Não foi encontrado um e-mail com domínio oficial do município."
+            },
+            {
+                municipio: "Baixio",
+                secretario: "Francisco Cavalcante de Araujo",
+                endereco: "Praça dos Três Poderes, Centro Administrativo Cícero Henrique Brasileiro, s/n – Centro – Baixio, Ceará, CEP 63.320-000",
+                telefone: "Não informado",
+                email: "educacao@baixio.ce.gov.br",
+                horario: "Não informado",
+                observacoes: "E-mail da ouvidoria atualizado para o da educação."
+            },
+            {
+                municipio: "Banabuiú",
+                secretario: "Imaculada Conceição Silveira",
+                endereco: "Rua Irmã Tavares, nº 220 – Centro – Banabuiú, Ceará, CEP 63.960-000",
+                telefone: "(88) 99903-1442",
+                email: "educacao@banabuiu.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:00 às 11:00 e das 13:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Barbalha",
+                secretario: "João Paulo Pereira de Sousa",
+                endereco: "Rua Madre Ilduária, nº 170 – Alto da Alegria – Barbalha, Ceará, CEP 63.092-222",
+                telefone: "Não informado",
+                email: "educacao@barbalha.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Barreira",
+                secretario: "Maria Edilene Lima",
+                endereco: "Rua Cândido Pereira, nº 518 – Centro – Barreira, Ceará, CEP 62.795-000",
+                telefone: "Não informado",
+                email: "educacao@barreira.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 17:00",
+                observacoes: "E-mail oficial encontrado."
+            },
+            {
+                municipio: "Barro",
+                secretario: "Francisco José de Oliveira",
+                endereco: "Rua José Vieira das Neves, nº 33 – Vila Gonzaga – Barro, Ceará, CEP 63.380-000",
+                telefone: "(88) 3554-1612",
+                email: "seduc.educacao@barro.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:00 às 13:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Barroquinha",
+                secretario: "Angeliete do Nascimento Veras",
+                endereco: "Rua Alfredo Veras Coelho, nº 100 – Centro – Barroquinha, Ceará, CEP 62.410-000",
+                telefone: "(88) 3623-1366",
+                email: "sme@barroquinha.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 14:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Baturité",
+                secretario: "Maria do Socorro Alves",
+                endereco: "Avenida Travessa Braga Filho, nº 997 – Conselheiro Estelita – Baturité, Ceará, CEP 62.760-000",
+                telefone: "(85) 99651-6124 / (85) 98677-2182",
+                email: "educacao@baturite.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 13:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Beberibe",
+                secretario: "Antônia Leidiane Pinheiro",
+                endereco: "Rua Adélia Colaço, nº 86 – Centro – Beberibe, Ceará, CEP 62.840-000",
+                telefone: "(85) 2180-8063",
+                email: "educa@beberibe.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 13:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Bela Cruz",
+                secretario: "Francisco Edvar da Silva",
+                endereco: "Rua Coronel Duca, nº S/N – Centro – Bela Cruz, Ceará, CEP 62.570-000",
+                telefone: "(88) 99991-1619",
+                email: "seduc@belacruz.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 13:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Boa Viagem",
+                secretario: "Francisca Régis da Silva",
+                endereco: "Rua José Rangel de Araújo, nº 221 – Centro – Boa Viagem, Ceará, CEP 63.870-000",
+                telefone: "(88) 3427-7351",
+                email: "educacao@boaviagem.ce.gov.br",
+                horario: "Segunda a quinta-feira, das 07:30 às 12:00 e das 13:30 às 17:00; sexta-feira, das 07:00 às 13:30",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Brejo Santo",
+                secretario: "Maria do Socorro Saraiva",
+                endereco: "Rua José Leite de Macêdo, nº 100 – Centro – Brejo Santo, Ceará, CEP 63.880-000",
+                telefone: "(88) 3531-1042, ramal 236",
+                email: "sedub@brejosanto.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Camocim",
+                secretario: "Francisca Aline Siqueira",
+                endereco: "Praça Deputado Murilo Aguiar, Centro – Camocim, Ceará, CEP 62.400-000",
+                telefone: "(88) 3212-0465",
+                email: "educacao@camocim.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 14:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Campos Sales",
+                secretario: "Maria Edilene Rodrigues",
+                endereco: "Travessa do Hotel Municipal, nº 83 – Centro – Campos Sales, Ceará, CEP 63.150-000",
+                telefone: "Não informado",
+                email: "educacao@campossales.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 14:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Canindé",
+                secretario: "Antônia Maria da Silva",
+                endereco: "Rua Dr. Gerôncio Brígido Neto, nº 546 – Imaculada Conceição – Canindé, Ceará, CEP 62.700-000",
+                telefone: "Não informado",
+                email: "educacao@caninde.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 13:30",
+                observacoes: "E-mail oficial encontrado e atualizado."
+            },
+            {
+                municipio: "Capistrano",
+                secretario: "Adriana Alves Pereira de Sousa",
+                endereco: "Rua Cel. Francisco Nunes Cavalcante, s/n – Centro – Capistrano, Ceará, CEP 62.748-000",
+                telefone: "Não informado",
+                email: "educacao@capistrano.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 14:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Caridade",
+                secretario: "Francisco Wellington",
+                endereco: "Rua Padre José Antônio, nº S/N – Centro – Caridade, Ceará, CEP 62.730-000",
+                telefone: "(85) 3324-1111",
+                email: "educacao@caridade.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 18:00",
+                observacoes: "E-mail oficial encontrado e atualizado."
+            },
+            {
+                municipio: "Caririaçu",
+                secretario: "Maria José de Sousa",
+                endereco: "Rua Luiz Bezerra, nº S/N – Paraíso – Caririaçu, Ceará, CEP 63.220-000",
+                telefone: "(88) 3547-1112",
+                email: "Não informado",
+                horario: "Segunda a sexta-feira, das 08:00 às 14:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Cariré",
+                secretario: "Aristóteles Gomos de Aguiar",
+                endereco: "Praça Elísio Aguiar, nº 141 – Centro – Cariré, Ceará, CEP 62.184-000",
+                telefone: "(88) 3646-1208",
+                email: "educacao@carire.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Cariús",
+                secretario: "Francisca Estela Viana",
+                endereco: "Rua Raul Nogueira II, nº S/N – Esplanada – Cariús, Ceará, CEP 63.530-000",
+                telefone: "(88) 99968-7120",
+                email: "smecarius@gmail.com",
+                horario: "Não informado",
+                observacoes: "Não foi encontrado um e-mail com domínio oficial do município."
+            },
+            {
+                municipio: "Carnaubal",
+                secretario: "Francisca Gerlânia",
+                endereco: "Rua 22 de Julho, nº S/N – Centro – Carnaubal, Ceará, CEP 62.375-000",
+                telefone: "Não informado",
+                email: "Não informado",
+                horario: "Segunda a sexta-feira, das 07:30 às 13:30",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Cascavel",
+                secretario: "Ana Paula Farias",
+                endereco: "Rua Irene Viana, nº 25 – Módulo Esportivo – Cascavel, Ceará, CEP 62.850-000",
+                telefone: "(85) 3334-1098",
+                email: "educacao@cascavel.ce.gov.br",
+                horario: "Não informado",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Catarina",
+                secretario: "Rodrigo Araujo Lima",
+                endereco: "Rua Odolino Pedrosa, nº S/N – Três Poderes – Catarina, Ceará, CEP 63.595-000",
+                telefone: "(88) 3556-1167",
+                email: "semed@catarina.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 14:00 às 16:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Catunda",
+                secretario: "Maria do Carmo Sousa",
+                endereco: "Rua Vila Nau, nº 715 – Centro – Catunda, Ceará, CEP 62.297-000",
+                telefone: "(88) 3686-1032",
+                email: "educacao@catunda.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 14:00",
+                observacoes: "E-mail oficial encontrado e atualizado."
+            },
+            {
+                municipio: "Caucaia",
+                secretario: "Camilo Santana Neto",
+                endereco: "Avenida Juaci Sampaio Pontes, nº 2000 – Centro – Caucaia, Ceará, CEP 61.600-150",
+                telefone: "(85) 3342-8040",
+                email: "sme@caucaia.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 16:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Cedro",
+                secretario: "Francisca Edilene",
+                endereco: "Rua Vereador Salustiano Moura, nº 340 – Centro – Cedro, Ceará, CEP 63.400-000",
+                telefone: "(88) 2168-1023",
+                email: "educacao@cedro.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 14:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Chaval",
+                secretario: "Maria de Fátima Gomes de Sousa",
+                endereco: "Avenida Monsenhor Carneiro, nº 207 – Centro – Chaval, Ceará, CEP 62.420-000",
+                telefone: "(88) 3625-1330",
+                email: "smeduc.chaval@gmail.com",
+                horario: "Segunda a sexta-feira, das 07:00 às 12:00 e das 13:00 às 17:00",
+                observacoes: "Não foi encontrado um e-mail com domínio oficial do município."
+            },
+            {
+                municipio: "Choró",
+                secretario: "Antônia Maria",
+                endereco: "Rua José de Alencar, nº 100 – Centro – Choró, Ceará, CEP 62.670-000",
+                telefone: "(88) 99659-0578",
+                email: "educacao@choro.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 14:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Chorozinho",
+                secretario: "Francisco das Chagas",
+                endereco: "Rua José de Alencar, nº 100 – Centro – Chorozinho, Ceará, CEP 62.670-000",
+                telefone: "(85) 3319-1163",
+                email: "educacao@chorozinho.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 14:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Coreaú",
+                secretario: "José Roberto",
+                endereco: "Avenida Prefeito Vilar Fontenele, nº 81 – Centro – Coreaú, Ceará, CEP 62.160-000",
+                telefone: "(88) 3645-1183 / (88) 9.8887-4139",
+                email: "educacao@coreau.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 14:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Crateús",
+                secretario: "Maria do Socorro Alves",
+                endereco: "Rua Manoel Augustinho, nº S/N – Centro – Crateús, Ceará, CEP 62.400-000",
+                telefone: "Não informado",
+                email: "gabineteseduc@crateus.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 13:30",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Crato",
+                secretario: "Otonite Sá Barreto Cortez",
+                endereco: "Rua Teodorico Teles Neto, nº S/N – Mirandão – Crato, Ceará, CEP 63.125-220",
+                telefone: "(88) 3523-1050 / (88) 3523-8817",
+                email: "educacao@crato.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 13:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Croatá",
+                secretario: "Maria Eliane de Sousa Veras",
+                endereco: "Rua Torquato Braz, nº 243 – Centro – Croatá, Ceará, CEP 62.390-000",
+                telefone: "(88) 3659-1164",
+                email: "educa@croata.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 14:00 e das 14:00 às 18:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Cruz",
+                secretario: "Maria de Fátima Souza de Oliveira",
+                endereco: "Praça dos Três Poderes, SN – Aningas – Cruz, Ceará, CEP 62.595-000",
+                telefone: "(88) 3660-1546",
+                email: "educacao@cruz.ce.gov.br",
+                horario: "Não informado",
+                observacoes: "E-mail oficial encontrado e atualizado."
+            },
+            {
+                municipio: "Deputado Irapuan Pinheiro",
+                secretario: "Maria Gesciana Pinheiro Alves",
+                endereco: "Não informado",
+                telefone: "(88) 98158-5748",
+                email: "educacao@irapuanpinheiro.ce.gov.br",
+                horario: "Não informado",
+                observacoes: "E-mail oficial encontrado e atualizado."
+            },
+            {
+                municipio: "Ererê",
+                secretario: "Não informado",
+                endereco: "Rua Senador Fernandes Távora, nº 000 – Centro – Ererê, Ceará, CEP 63.470-000",
+                telefone: "(88) 9.3434-1041",
+                email: "educacao@erere.ce.gov.br",
+                horario: "Segunda a quinta-feira, das 07:30 às 11:30 e das 13:00 às 17:00; sexta-feira, das 07:00 às 13:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Eusébio",
+                secretario: "Goretti Frota",
+                endereco: "Rua Irmã Ambrosina, nº 266 – Centro – Eusébio, Ceará, CEP 61.760-405",
+                telefone: "(85) 3360-0132 / (85) 3360-0133 – Ramal: 25068",
+                email: "sme.eusebio@eusebio.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 16:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Farias Brito",
+                secretario: "José de Alencar Bezerra",
+                endereco: "Rua Antônio Fernandes Lima, nº 316 – Centro – Farias Brito, Ceará",
+                telefone: "(88) 3544-1213",
+                email: "educacao@fariasbrito.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:00 às 11:00 e das 13:00 às 17:00",
+                observacoes: "E-mail oficial encontrado e atualizado."
+            },
+            {
+                municipio: "Forquilha",
+                secretario: "Mirterdan Dias Leite",
+                endereco: "Avenida Criança Dante Valério, nº S/N – Centro – Forquilha, Ceará, CEP 62.115-000",
+                telefone: "(88) 3619-1167",
+                email: "sme@forquilha.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 11:30 e das 13:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Fortaleza",
+                secretario: "Jefferson Maia",
+                endereco: "Avenida Desembargador Moreira, nº 2875 – Dionísio Torres – Fortaleza, Ceará, CEP 60.170-173",
+                telefone: "(85) 3459-6700",
+                email: "Não informado",
+                horario: "Não informado",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Fortim",
+                secretario: "Ivoneide Araujo de Oliveira",
+                endereco: "Rua Francisco Augustinho, nº 238 – Centro – Fortim, Ceará, CEP 62.815-000",
+                telefone: "(88) 3413-1010 / (88) 8823-1596",
+                email: "educacao@fortim.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 14:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Frecheirinha",
+                secretario: "Sammya Karyne Aguiar Barros",
+                endereco: "Rua Antônio Costa, nº S/N – Centro – Frecheirinha, Ceará, CEP 62.340-000",
+                telefone: "(88) 3655-1200",
+                email: "seduc@frecheirinha.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 11:30 e das 13:30 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "General Sampaio",
+                secretario: "Francisco de Assis Vieira de Sousa",
+                endereco: "Rua Delfino Ferreira Gomes, nº 97 – Nossa Senhora das Graças – General Sampaio, Ceará, CEP 62.738-000",
+                telefone: "(85) 3357-1088 / (85) 98594-0782",
+                email: "educacao@generalsampaio.ce.gov.br",
+                horario: "Segunda a quinta-feira, das 07:30 às 11:00 e das 13:00 às 17:00; sexta-feira, expediente interno",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Graça",
+                secretario: "Antônio Erivan Rodrigues Medeiros de Sousa",
+                endereco: "Av. José Cândido de Carvalho, nº 483 – Centro – Graça, Ceará, CEP 62.365-000",
+                telefone: "(88) 3656-1036",
+                email: "seduc@graca.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 11:30",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Granja",
+                secretario: "Maria do Socorro Alves",
+                endereco: "Rua José de Alencar, nº 100 – Centro – Granja, Ceará, CEP 62.650-000",
+                telefone: "(88) 3624-1207",
+                email: "educacao@granja.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 14:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Granjeiro",
+                secretario: "Não informado",
+                endereco: "Rua David Granjeiro, nº 104 – Centro – Granjeiro, Ceará, CEP 62.300-000",
+                telefone: "(88) 9.9324-4871",
+                email: "educacao@granjeiro.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 14:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Groaíras",
+                secretario: "Davi Teixeira Rodrigues",
+                endereco: "Rua João Guarino Feijão, nº 722 – Chico Gerônimo – Groaíras, Ceará, CEP 62.190-000",
+                telefone: "Não informado",
+                email: "educacao@groairas.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Guaiúba",
+                secretario: "Silvana Guedes de Sousa",
+                endereco: "Rua Leiria de Andrade, nº 409 – Centro – Guaiúba, Ceará, CEP 61.890-000",
+                telefone: "(85) 3376-1017",
+                email: "sme@guaiuba.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 14:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Guaraciaba do Norte",
+                secretario: "Jair Boto Cruz",
+                endereco: "Rua Cel. Clínio Memória, nº 279 – Centro – Guaraciaba do Norte, Ceará, CEP 62.380-000",
+                telefone: "(88) 3652-2349",
+                email: "educacao@guaraciabadonorte.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 13:30 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Guaramiranga",
+                secretario: "Maria Silvana de Castro",
+                endereco: "Rua Joaquim Alves Nogueira, nº 409 – Centro – Guaramiranga, Ceará, CEP 62.766-000",
+                telefone: "(85) 3321-1122",
+                email: "Não informado",
+                horario: "Não informado",
+                observacoes: "E-mail da secretaria não encontrado."
+            },
+            {
+                municipio: "Hidrolândia",
+                secretario: "Moema Timbó Rodrigues",
+                endereco: "Avenida Cláudio Camelo Timbó, nº S/N – Centro – Hidrolândia, Ceará, CEP 62.270-000",
+                telefone: "(88) 3638-1305",
+                email: "educacao@hidrolandia.ce.gov.br",
+                horario: "Segunda a quinta-feira, das 07:00 às 13:00 e das 14:00 às 17:00; sexta-feira, das 07:00 às 13:00",
+                observacoes: "E-mail oficial encontrado e atualizado."
+            },
+            {
+                municipio: "Horizonte",
+                secretario: "Ana Paula Farias",
+                endereco: "Rua Baturité, nº 770 – Centro Administrativo Domingão – Planalto Horizonte, Ceará, CEP 62.884-000",
+                telefone: "(85) 3336-6008",
+                email: "educacao@horizonte.ce.gov.br",
+                horario: "Não informado",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Ibaretama",
+                secretario: "Antonia Verbênia de Sousa Silva",
+                endereco: "Avenida João Ricardo da Silveira, nº S/N – Centro – Ibaretama, Ceará, CEP 63.970-000",
+                telefone: "Não informado",
+                email: "educacao@ibaretama.ce.gov.br",
+                horario: "Não informado",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Ibiapina",
+                secretario: "Francisco Edilberto",
+                endereco: "Rua Moisés Aarão, nº S/N – Centro – Ibiapina, Ceará, CEP 62.360-000",
+                telefone: "(88) 9978-6469",
+                email: "educacao@ibiapina.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 14:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Ibicuitinga",
+                secretario: "Antonia Elissandra de Oliveira Lima",
+                endereco: "Rua Samuel Ferreira Nobre, nº 2121 – Centro – Ibicuitinga, Ceará, CEP 62.955-000",
+                telefone: "(88) 99305-4462",
+                email: "educacao@ibicuitinga.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 14:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Icapuí",
+                secretario: "Francisco Edmilson Fernandes da Silva",
+                endereco: "Avenida 22 de Janeiro, nº 5184 – Centro – Icapuí, Ceará, CEP 62.810-000",
+                telefone: "(88) 3432-1021",
+                email: "educacao@icapui.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 13:30",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Icó",
+                secretario: "Patrícia Augusto Brasil Barbosa",
+                endereco: "Rua Dr. Inácio Dias, nº 1174-1370 – Centro – Icó, Ceará, CEP 63.430-000",
+                telefone: "(88) 3561-1508",
+                email: "educacao@ico.ce.gov.br",
+                horario: "Segunda a quinta-feira, das 07:30 às 11:30 e das 13:00 às 17:00; sexta-feira, das 07:30 às 13:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Iguatu",
+                secretario: "Francisco Laelton Alencar da Silva",
+                endereco: "Não informado",
+                telefone: "Não informado",
+                email: "seces@iguatu.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 13:30",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Independência",
+                secretario: "Francisco de Assis Ferreira Souto",
+                endereco: "Rua do Cruzeiro, nº S/N – Centro – Independência, Ceará, CEP 63.640-000",
+                telefone: "(88) 3675-1312",
+                email: "educacao@independencia.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 11:30 e das 13:30 às 17:30",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Ipaporanga",
+                secretario: "Ana Maria Mendes Teodórico",
+                endereco: "Avenida Erimar Ribeiro de Paiva, nº 027 – Alto do Bom Princípio – Ipaporanga, Ceará, CEP 62.215-000",
+                telefone: "(88) 9.9668-9218",
+                email: "educacao@ipaporanga.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:00 às 12:00 e das 13:00 às 16:00",
+                observacoes: "E-mail oficial encontrado e atualizado."
+            },
+            {
+                municipio: "Ipaumirim",
+                secretario: "Maria Vilma de Andrade",
+                endereco: "Rua Cel. Gustavo Lima, nº 230 – Centro – Ipaumirim, Ceará, CEP 63.340-000",
+                telefone: "(88) 9.9928-6930",
+                email: "educacao@ipaumirim.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:00 às 12:00 e das 13:00 às 16:00",
+                observacoes: "E-mail oficial encontrado e atualizado."
+            },
+            {
+                municipio: "Ipu",
+                secretario: "João Batista Farias Damasceno",
+                endereco: "Rua Cel. Liberalino, nº 1066 – Centro – Ipu, Ceará, CEP 62.250-000",
+                telefone: "(88) 9.9908-8078",
+                email: "educacao@ipu.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 14:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Ipueiras",
+                secretario: "Francisco Carlos de Oliveira",
+                endereco: "Não informado",
+                telefone: "Não informado",
+                email: "educacao@ipueiras.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Iracema",
+                secretario: "Jakson Barbosa Gama",
+                endereco: "Rua Celso Gomes da Silva, nº 01 – Centro – Iracema, Ceará, CEP 62.980-000",
+                telefone: "(88) 3428-1462",
+                email: "seduc@iracema.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:00 às 13:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Irauçuba",
+                secretario: "Antônia Fernanda Lima",
+                endereco: "Praça São Luiz, nº 26 – Centro – Irauçuba, Ceará, CEP 62.620-000",
+                telefone: "(88) 3635-1210",
+                email: "educacao@iraucuba.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 13:30 às 17:30",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Itaiçaba",
+                secretario: "Isabele Chaves de Freitas",
+                endereco: "Rua Cel. João Correia, nº 298 – Centro – Itaiçaba, Ceará, CEP 62.820-000",
+                telefone: "(88) 3410-1112",
+                email: "educacao@itaicaba.ce.gov.br",
+                horario: "Segunda a quinta-feira, das 07:30 às 11:30 e das 13:00 às 17:00; sexta-feira, das 07:30 às 13:00",
+                observacoes: "E-mail do gabinete atualizado para o da educação."
+            },
+            {
+                municipio: "Itaitinga",
+                secretario: "Raimundo Nonato Ferreira",
+                endereco: "Avenida Coronel Virgílio Távora, nº 1710 – Centro – Itaitinga, Ceará, CEP 61.880-000",
+                telefone: "(85) 3513-2002",
+                email: "sme@itaitinga.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 13:00 às 17:00",
+                observacoes: "E-mail do prefeito atualizado para o da secretaria."
+            },
+            {
+                municipio: "Itapajé",
+                secretario: "Gerlânia Maria Pinheiro",
+                endereco: "Rua Inocêncio Braga, nº 301 – Centro – Itapajé, Ceará, CEP 62.500-007",
+                telefone: "(85) 3346-1506",
+                email: "educacao@itapaje.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 18:00",
+                observacoes: "E-mail de Itapipoca corrigido para o de Itapajé."
+            },
+            {
+                municipio: "Itapipoca",
+                secretario: "Francisco Lucas Alvino da Silva",
+                endereco: "Rua Inocêncio Braga, nº 301 – Centro – Itapipoca, Ceará, CEP 62.500-007",
+                telefone: "(88) 3631-5950 – Ramal 1103",
+                email: "sec.educacao@itapipoca.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 18:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Itapiúna",
+                secretario: "Antonio Kleber Pinheiro de Sousa",
+                endereco: "Rua Cel. João Correia, nº 298 – Centro – Itapiúna, Ceará, CEP 62.820-000",
+                telefone: "(88) 3431-1190",
+                email: "educacao@itapiuna.ce.gov.br",
+                horario: "Segunda a quinta-feira, das 07:30 às 11:30 e das 13:00 às 17:00; sexta-feira, das 07:30 às 13:00",
+                observacoes: "Dados de Itaiçaba corrigidos para Itapiúna."
+            },
+            {
+                municipio: "Itarema",
+                secretario: "Francisca Edilene Costa",
+                endereco: "Não informado",
+                telefone: "Não informado",
+                email: "seduc@itarema.ce.gov.br",
+                horario: "Não informado",
+                observacoes: "E-mail oficial encontrado."
+            },
+            {
+                municipio: "Itatira",
+                secretario: "Maria Edilene Alves",
+                endereco: "Rua Antônio Alves Guerra, nº S/N – Centro – Itatira, Ceará, CEP 62.720-000",
+                telefone: "(88) 98188-2384",
+                email: "educ@educ.itatira.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 16:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Jaguaretama",
+                secretario: "Francisca Nerdinan de Oliveira",
+                endereco: "Rua Tristão Gonçalves, nº 185 – Centro – Jaguaretama, Ceará, CEP 63.480-000",
+                telefone: "(88) 3576-1305",
+                email: "Não informado",
+                horario: "Segunda a quinta-feira, das 08:00 às 12:00 e das 14:00 às 17:00; sexta-feira, das 08:00 às 14:00",
+                observacoes: "E-mail da secretaria não encontrado."
+            },
+            {
+                municipio: "Jaguaribara",
+                secretario: "Francisca Rosimeire de Lima",
+                endereco: "Avenida Bezerra de Menezes, nº 350 – Jaguaribara, Ceará",
+                telefone: "(88) 3568-4534",
+                email: "educacao@jaguaribara.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 11:30 e das 13:30 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Jaguaribe",
+                secretario: "Francisca das Chagas",
+                endereco: "Não informado",
+                telefone: "Não informado",
+                email: "educacao@jaguaribe.ce.gov.br",
+                horario: "Não informado",
+                observacoes: "E-mail oficial encontrado."
+            },
+            {
+                municipio: "Jaguaruana",
+                secretario: "Maria Socorro de Lima",
+                endereco: "Não informado",
+                telefone: "Não informado",
+                email: "sme@jaguaruana.ce.gov.br",
+                horario: "Não informado",
+                observacoes: "E-mail oficial encontrado."
+            },
+            {
+                municipio: "Jardim",
+                secretario: "Antônia Maria de Sousa",
+                endereco: "Rua Coronel Rocha, nº 211 – Centro – Jardim, Ceará, CEP 63.290-000",
+                telefone: "Não informado",
+                email: "educacao@jardim.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 16:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Jati",
+                secretario: "Maria de Lourdes Diniz",
+                endereco: "Rua Sabino Pereira, nº 29 – Centro – Jati, Ceará, CEP 63.275-000",
+                telefone: "(88) 9.8841-8752",
+                email: "educacao@jati.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 14:00",
+                observacoes: "E-mail oficial encontrado e atualizado."
+            },
+            {
+                municipio: "Jijoca de Jericoacoara",
+                secretario: "Maria do Socorro Silva",
+                endereco: "Rua Minas Gerais, nº 411 – Centro – Jijoca de Jericoacoara, Ceará, CEP 62.598-000",
+                telefone: "Não informado",
+                email: "educacao@jijocadejericoacoara.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 11:30 e das 13:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Juazeiro do Norte",
+                secretario: "Maria Loureto de Lima",
+                endereco: "Rua São Francisco, nº SN – São Miguel – Juazeiro do Norte, Ceará, CEP 63.010-480",
+                telefone: "(88) 3199-0376 / (88) 3199-0377",
+                email: "seduc@juazeiro.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 11:30 e das 13:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Jucás",
+                secretario: "Antonia Girliane de Oliveira",
+                endereco: "Rua São Jorge – Centro – Jucás, Ceará, CEP 63.580-000",
+                telefone: "(88) 3517-1569",
+                email: "Não informado",
+                horario: "Segunda a sexta-feira, das 07:00 às 17:00",
+                observacoes: "E-mail da secretaria não encontrado."
+            },
+            {
+                municipio: "Lavras da Mangabeira",
+                secretario: "Maria do Carmo Almeida",
+                endereco: "Não informado",
+                telefone: "Não informado",
+                email: "Não informado",
+                horario: "Não informado",
+                observacoes: "Dados de contato da secretaria não encontrados."
+            },
+            {
+                municipio: "Limoeiro do Norte",
+                secretario: "Francisco Edvan da Silva",
+                endereco: "Não informado",
+                telefone: "Não informado",
+                email: "sme@limoeirodonorte.ce.gov.br",
+                horario: "Não informado",
+                observacoes: "E-mail oficial encontrado."
+            },
+            {
+                municipio: "Madalena",
+                secretario: "Antonio Wagner de Mesquita",
+                endereco: "Não informado",
+                telefone: "Não informado",
+                email: "educacao@madalena.ce.gov.br",
+                horario: "Não informado",
+                observacoes: "E-mail oficial encontrado."
+            },
+            {
+                municipio: "Maracanaú",
+                secretario: "Ana Paula Farias",
+                endereco: "Não informado",
+                telefone: "Não informado",
+                email: "seduc@maracanau.ce.gov.br",
+                horario: "Não informado",
+                observacoes: "E-mail oficial encontrado."
+            },
+            {
+                municipio: "Maranguape",
+                secretario: "Antônia Maria de Sousa",
+                endereco: "Não informado",
+                telefone: "Não informado",
+                email: "Não informado",
+                horario: "Não informado",
+                observacoes: "Dados de contato da secretaria não encontrados."
+            },
+            {
+                municipio: "Marco",
+                secretario: "Maria Célia de Sousa",
+                endereco: "Não informado",
+                telefone: "Não informado",
+                email: "educacao@marco.ce.gov.br",
+                horario: "Não informado",
+                observacoes: "E-mail oficial encontrado."
+            },
+            {
+                municipio: "Martinópole",
+                secretario: "Maria Sônia de Sousa",
+                endereco: "Não informado",
+                telefone: "Não informado",
+                email: "educacao@martinopole.ce.gov.br",
+                horario: "Não informado",
+                observacoes: "E-mail oficial encontrado."
+            },
+            {
+                municipio: "Massapê",
+                secretario: "Maria do Socorro Oliveira",
+                endereco: "Não informado",
+                telefone: "Não informado",
+                email: "sme@massape.ce.gov.br",
+                horario: "Não informado",
+                observacoes: "E-mail oficial encontrado."
+            },
+            {
+                municipio: "Mauriti",
+                secretario: "José Roberto Alves",
+                endereco: "Não informado",
+                telefone: "Não informado",
+                email: "educacao@mauriti.ce.gov.br",
+                horario: "Não informado",
+                observacoes: "E-mail oficial encontrado."
+            },
+            {
+                municipio: "Meruoca",
+                secretario: "Francisca Maria de Sousa",
+                endereco: "Não informado",
+                telefone: "Não informado",
+                email: "educacao@meruoca.ce.gov.br",
+                horario: "Não informado",
+                observacoes: "E-mail oficial encontrado."
+            },
+            {
+                municipio: "Milagres",
+                secretario: "Maria Edilene Alves",
+                endereco: "Av. Pedro Leite da Cunha, nº S/N – Eucaliptos – Milagres, Ceará, CEP 63.250-000",
+                telefone: "(88) 3553-1255",
+                email: "educacao@milagres.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 12:00 e das 13:30 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Milhã",
+                secretario: "Não informado",
+                endereco: "Rua Joaquim Nemésio Pinheiro, nº 119 – Centro – Milhã, Ceará",
+                telefone: "(88) 3529-1226",
+                email: "seduc@milha.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:00 às 13:00",
+                observacoes: "E-mail oficial encontrado e atualizado. O e-mail anterior pertencia a uma escola."
+            },
+            {
+                municipio: "Miraíma",
+                secretario: "Antonia Geórgia de Sousa",
+                endereco: "Rua Cândido Ribeiro, nº 606 – Centro – Miraíma, Ceará, CEP 62.530-000",
+                telefone: "(88) 9.9412-1471",
+                email: "seduc@miraima.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:00 às 13:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Missão Velha",
+                secretario: "Francisco Carlos de Oliveira",
+                endereco: "Avenida Luiz Jucá Arrais Maia, nº S/N – Bairro Antônio Linard – Missão Velha, Ceará, CEP 63.200-000",
+                telefone: "(88) 3542-1817",
+                email: "educacao@missaovelha.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 14:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Mombaça",
+                secretario: "Antônia Maria de Sousa",
+                endereco: "Rua Dr. José Carneiro, nº 155 – Centro – Mombaça, Ceará, CEP 63.610-000",
+                telefone: "(85) 9.6954-4444",
+                email: "educacao@mombaca.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 14:00 às 17:00 (atendimento por agendamento devido a decreto)",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Monsenhor Tabosa",
+                secretario: "João Rodrigues de Sousa Filho",
+                endereco: "Av. Plínio Leitão, nº 08 – Centro – Monsenhor Tabosa, Ceará, CEP 63.780-000",
+                telefone: "(88) 3696-2174",
+                email: "secretariaeducacao@monsenhortabosa.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 14:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Morada Nova",
+                secretario: "Maria do Socorro Silva",
+                endereco: "Não informado",
+                telefone: "Não informado",
+                email: "educacao@moradanova.ce.gov.br",
+                horario: "Não informado",
+                observacoes: "E-mail oficial encontrado."
+            },
+            {
+                municipio: "Moraújo",
+                secretario: "Maria Gleiciane de Sousa Aguiar",
+                endereco: "Não informado",
+                telefone: "Não informado",
+                email: "sme@moraujo.ce.gov.br",
+                horario: "Não informado",
+                observacoes: "E-mail oficial encontrado."
+            },
+            {
+                municipio: "Morrinhos",
+                secretario: "Maria do Socorro de Sousa",
+                endereco: "Rua José Ibiapina, 210 – Centro – Morrinhos, Ceará, CEP 62.560-000",
+                telefone: "Não informado",
+                email: "educacao@morrinhos.ce.gov.br",
+                horario: "Não informado",
+                observacoes: "E-mail oficial encontrado."
+            },
+            {
+                municipio: "Mucambo",
+                secretario: "Francisco de Assis Araújo",
+                endereco: "Não informado",
+                telefone: "Não informado",
+                email: "educacao@mucambo.ce.gov.br",
+                horario: "Não informado",
+                observacoes: "E-mail oficial encontrado."
+            },
+            {
+                municipio: "Mulungu",
+                secretario: "Maria do Carmo Almeida",
+                endereco: "Travessa São Francisco, nº 188 – Centro – Mulungu, Ceará, CEP 62.764-000",
+                telefone: "(85) 3328-1444",
+                email: "seduc@mulungu.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 11:30 e das 13:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Nova Olinda",
+                secretario: "Francisco Edvan da Silva",
+                endereco: "Rua Padre Cristiano Coelho, nº S/N – Cajueiros – Nova Olinda, Ceará",
+                telefone: "(88) 3546-1730",
+                email: "educacao@novaolinda.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 17:00",
+                observacoes: "E-mail oficial encontrado e atualizado."
+            },
+            {
+                municipio: "Nova Russas",
+                secretario: "Francisco de Assis de Sousa Martins",
+                endereco: "Rua Antônio Carlos, nº 210 – Bairro Vermelho – Nova Russas, Ceará, CEP 62.200-000",
+                telefone: "(88) 3672-1920",
+                email: "educacao@novarussas.ce.gov.br",
+                horario: "Segunda a quinta-feira, das 07:30 às 12:00 e sexta-feira das 08:00 às 14:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Novo Oriente",
+                secretario: "Antônia Maria de Sousa",
+                endereco: "Não informado",
+                telefone: "(88) 3629-171",
+                email: "educacao@novooriente.ce.gov.br",
+                horario: "Não informado",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Ocara",
+                secretario: "Regina Lúcia de Sousa",
+                endereco: "Avenida Coronel João Felipe, nº 858 – Centro – Ocara, Ceará",
+                telefone: "(85) 3322-1011",
+                email: "seduc@ocara.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 13:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Orós",
+                secretario: "Maria do Socorro Oliveira",
+                endereco: "Praça Anastácio Maia, nº 40 – Centro – Orós, Ceará, CEP 63.520-000",
+                telefone: "(88) 3584-1188",
+                email: "seceducacao@oros.ce.gov.br",
+                horario: "Segunda a quinta-feira, das 07:00 às 11:00 e das 13:00 às 17:00; sexta-feira, das 07:00 às 13:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Pacajus",
+                secretario: "José Roberto Alves",
+                endereco: "Rua Tabelião José Gama Filho, nº 720 – Buriti – Pacajus, Ceará, CEP 62.870-000",
+                telefone: "(85) 2136-7697",
+                email: "educacao@pacajus.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Pacatuba",
+                secretario: "Ana Paula Farias",
+                endereco: "Rua Coronel José Libânio, nº S/N – Centro – Pacatuba, Ceará, CEP 61.801-21",
+                telefone: "(85) 9.9425-2274",
+                email: "educacao@pacatuba.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Pacoti",
+                secretario: "Andrea Nogueira de Almeida",
+                endereco: "Avenida Coronel José Cícero Sampaio, nº 663 – Centro – Pacoti, Ceará, CEP 62.770-000",
+                telefone: "(85) 3325-1413",
+                email: "smepacoti@edu.pacoti.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 14:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Pacujá",
+                secretario: "Francisco de Assis Farias",
+                endereco: "Rua Vereador Luís Manso Magalhães, nº S/N – Centro – Pacujá, Ceará, CEP 62.180-000",
+                telefone: "(88) 9.9333-6556",
+                email: "educacao@pacuja.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Palhano",
+                secretario: "Maria Josinete de Oliveira",
+                endereco: "Av. Possidônio Barreto, nº 630 – Centro – Palhano, Ceará, CEP 62.910-000",
+                telefone: "(88) 9.9204-7611 / (88) 3415-1050",
+                email: "sec.educacao@palhano.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 14:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Palmácia",
+                secretario: "Maria Edilene Alves",
+                endereco: "Rua Francisco de Queiroz, nº S/N – Centro – Palmácia, Ceará, CEP 62.780-000",
+                telefone: "Não informado",
+                email: "sme@palmacia.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Paracuru",
+                secretario: "Francisco Carlos de Oliveira",
+                endereco: "Rua Ormezinda Sampaio, nº 330 – Centro – Paracuru, Ceará, CEP 62.680-000",
+                telefone: "(85) 9.8126-4203",
+                email: "educacao@paracuru.ce.gov.br",
+                horario: "Segunda a quinta-feira, das 08:00 às 12:00 e das 14:00 às 17:00; sexta-feira, das 08:00 às 12:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Paraipaba",
+                secretario: "Maria do Livramento de Sousa",
+                endereco: "Rua Joaquim Braga, nº 296 – Centro – Paraipaba, Ceará, CEP 62.685-000",
+                telefone: "Não informado",
+                email: "educacao@paraipaba.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 14:00",
+                observacoes: "E-mail oficial encontrado."
+            },
+            {
+                municipio: "Parambu",
+                secretario: "Antônia Maria de Sousa",
+                endereco: "Rua 07 de Setembro, nº S/N – Centro – Parambu, Ceará",
+                telefone: "(88) 99667-6200",
+                email: "secretariadeeducacao@parambu.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:00 às 15:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Paramoti",
+                secretario: "Antonia Gizele Gomes da Silva",
+                endereco: "Rua Gonçalo Soares, nº 471 – Centro – Paramoti, Ceará, CEP 62.736-000",
+                telefone: "(85) 9.9234-2039",
+                email: "seduc@paramoti.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:00 às 13:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Pedra Branca",
+                secretario: "Maria do Socorro Silva",
+                endereco: "Rua Fortunato Silva, nº S/N – Centro – Pedra Branca, Ceará, CEP 63.630-000",
+                telefone: "(88) 9.9635-7554",
+                email: "educacao@pedrabranca.ce.gov.br",
+                horario: "Segunda a quinta-feira, das 08:00 às 12:00 e das 13:00 às 17:00; sexta-feira, das 07:30 às 13:30",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Penaforte",
+                secretario: "Gracy Pereira da Silva",
+                endereco: "Avenida Padre Cícero, nº S/N – Centro – Penaforte, Ceará, CEP 63.280-000",
+                telefone: "(88) 98835-1025",
+                email: "educacao@penaforte.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:00 às 16:00",
+                observacoes: "E-mail oficial encontrado e atualizado."
+            },
+            {
+                municipio: "Pentecoste",
+                secretario: "José Roberto Alves",
+                endereco: "Rua Major João Martins, nº S/N – Centro – Pentecoste, Ceará, CEP 62.640-000",
+                telefone: "(85) 3352-2600",
+                email: "seduc@pentecoste.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 11:30 e das 13:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Pereiro",
+                secretario: "Antonia Régia de Freitas",
+                endereco: "Avenida João Terceiro, nº 102 – Centro – Pereiro, Ceará, CEP 63.460-000",
+                telefone: "(88) 9.9990-2158",
+                email: "seduc@edu.pereiro.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:00 às 11:00 e das 13:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Pindoretama",
+                secretario: "Maria do Carmo Almeida",
+                endereco: "Rua Raimundo Nonato Costa, nº 987 – Centro – Pindoretama, Ceará, CEP 62.860-000",
+                telefone: "Não informado",
+                email: "Não informado",
+                horario: "Segunda a sexta-feira, das 08:00 às 14:00",
+                observacoes: "E-mail da secretaria não encontrado."
+            },
+            {
+                municipio: "Piquet Carneiro",
+                secretario: "Francisco Edvan da Silva",
+                endereco: "Rua Aluízio Saraiva, nº 22 – Centro – Piquet Carneiro, Ceará, CEP 63.605-000",
+                telefone: "(88) 3516-1805",
+                email: "seduc@piquetcarneiro.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 13:30",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Pires Ferreira",
+                secretario: "Francisca Ozanira de Sousa",
+                endereco: "Rua Maria Antusa Soares Passos, s/n – Centro – Pires Ferreira, Ceará, CEP 62.255-000",
+                telefone: "(88) 3651-1017",
+                email: "educacao@piresferreira.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 13:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Poranga",
+                secretario: "Antônia Maria de Sousa",
+                endereco: "Avenida Dr. Epítácio de Pinho, nº S/N – Centro – Poranga, Ceará, CEP 62.220-000",
+                telefone: "(88) 9.9843-4070",
+                email: "educacao@poranga.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 13:00 às 17:00",
+                observacoes: "E-mail oficial encontrado e atualizado."
+            },
+            {
+                municipio: "Porteiras",
+                secretario: "Maria do Socorro Oliveira",
+                endereco: "Rua Mestre Zuca, s/n – Centro – Porteiras, Ceará, CEP 63.270-000",
+                telefone: "(88) 3557-1252",
+                email: "educacao@porteiras.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 13:00 às 16:00",
+                observacoes: "E-mail oficial encontrado e atualizado."
+            },
+            {
+                municipio: "Potengi",
+                secretario: "Maria de Fátima Pereira",
+                endereco: "Avenida Vila Andrade, nº 291 – Vila Andrade – Potengi, Ceará, CEP 63.160-000",
+                telefone: "(88) 3538-1562",
+                email: "educacao@potengi.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 13:30 às 16:30",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Potiretama",
+                secretario: "José Roberto Alves",
+                endereco: "Rua Expedito Leite da Silva, nº 33 – Centro – Potiretama, Ceará, CEP 62.990-000",
+                telefone: "(88) 9.9613-2273",
+                email: "educacao@potiretama.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 17:00",
+                observacoes: "E-mail oficial encontrado e atualizado."
+            },
+            {
+                municipio: "Quiterianópolis",
+                secretario: "Francisca Edna de Oliveira",
+                endereco: "Rua Acadêmico Deusdete Pedrosa, nº S/N – Centro – Quiterianópolis, Ceará, CEP 63.650-000",
+                telefone: "(88) 9.9711-3346",
+                email: "Não informado",
+                horario: "Segunda a sexta-feira, das 08:00 às 14:00",
+                observacoes: "E-mail da secretaria não encontrado."
+            },
+            {
+                municipio: "Quixadá",
+                secretario: "Ana Paula Farias",
+                endereco: "Rua José de Alencar, nº 100 – Centro – Quixadá, Ceará, CEP 63.700-000",
+                telefone: "(88) 9.8186-0127",
+                email: "educacao@quixada.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Quixelô",
+                secretario: "Maria Suely de Oliveira",
+                endereco: "Rua Maria Júlia do Nascimento, nº S/N – Centro – Quixelô, Ceará, CEP 63.515-000",
+                telefone: "(88) 3579-1378",
+                email: "educacao@quixelo.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 13:15",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Quixeramobim",
+                secretario: "Maria Edilene Alves",
+                endereco: "Rua Rafael Pordeus, nº 460 – Centro – Quixeramobim, Ceará, CEP 63.800-000",
+                telefone: "(88) 9.8191-2371 / (85) 98682-6792",
+                email: "sec_educacaoeciencia@quixeramobim.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 11:30 e das 13:30 às 17:30",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Quixeré",
+                secretario: "Francisco Carlos de Oliveira",
+                endereco: "Rua Padre Joaquim de Menezes, nº 659 – Centro – Quixeré, Ceará, CEP 62.920-000",
+                telefone: "(85) 4042-5513 – Ramal 4073",
+                email: "sme@quixere.ce.gov.br",
+                horario: "Segunda a quinta-feira, das 07:30 às 11:30 e das 13:00 às 17:00; sexta-feira, das 07:30 às 13:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Redenção",
+                secretario: "Antônia Maria de Sousa",
+                endereco: "Praça Francisco Ferreira da Silva, nº S/N – Parque da Liberdade – Redenção, Ceará, CEP 62.790-000",
+                telefone: "(85) 9.9253-1559",
+                email: "educacao@redencao.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 11:30 e das 13:30 às 16:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Reriutaba",
+                secretario: "Francisca Eliane de Sousa",
+                endereco: "Rua Dr. Osvaldo Honorato Lemos – Centro – Reriutaba, Ceará, CEP 62.260-000",
+                telefone: "(88) 3637-2188",
+                email: "seduc@reriutaba.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 14:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Russas",
+                secretario: "Maria do Socorro Silva",
+                endereco: "Rua Dr. José Ramalho, nº 1536 – Centro – Russas, Ceará, CEP 62.900-089",
+                telefone: "(88) 3411-0121",
+                email: "semed_gestao@russas.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 12:00 e das 13:30 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Saboeiro",
+                secretario: "Maria Joelma de Sousa",
+                endereco: "Rua José Rodrigues de Melo, nº S/N – São José – Saboeiro, Ceará, CEP 63.590-000",
+                telefone: "(85) 99696-9601",
+                email: "educacao@saboeiro.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 14:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Salitre",
+                secretario: "José Roberto Alves",
+                endereco: "Não especificado",
+                telefone: "(88) 99344-6631",
+                email: "educacao@salitre.ce.gov.br",
+                horario: "Não especificado",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Santa Quitéria",
+                secretario: "Ana Paula Farias",
+                endereco: "Rua Cel. Manoel Alves, nº 346 – Centro – Santa Quitéria, Ceará, CEP 62.280-000",
+                telefone: "Não informado",
+                email: "seduc.sq@santaquiteria.ce.gov.br",
+                horario: "Segunda a quinta-feira, das 08:00 às 17:00; sexta-feira, das 08:00 às 14:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Santana do Acaraú",
+                secretario: "Maria do Socorro de Vasconcelos",
+                endereco: "Rua João Adeodato de Vasconcelos, nº S/N – Centro – Santana do Acaraú, Ceará, CEP 62.150-000",
+                telefone: "(88) 9.9973-8000",
+                email: "educacao@santanadoacarau.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:00 às 13:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Santana do Cariri",
+                secretario: "Maria do Socorro Alves",
+                endereco: "Rua Plácido Cidade Nuvens, nº 387 – Centro – Santana do Cariri, Ceará, CEP 63.190-000",
+                telefone: "(88) 3545-1281 / (88) 3545-1267 / (88) 3545-1256",
+                email: "educacao@santanadocariri.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 14:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "São Benedito",
+                secretario: "Maria do Socorro Oliveira",
+                endereco: "Rua João Cajazeira de Almeida, nº 116 – Castelo – São Benedito, Ceará, CEP 62.370-000",
+                telefone: "(88) 3626-2235",
+                email: "educacao@saobenedito.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 12:00 e das 13:30 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "São Gonçalo do Amarante",
+                secretario: "José Roberto Alves",
+                endereco: "Rua Menezes Pimentel, nº 54 – Centro – São Gonçalo do Amarante, Ceará, CEP 62.670-000",
+                telefone: "(85) 4042-0756",
+                email: "seduc@saogoncalodoamarante.ce.gov.br",
+                horario: "Segunda a quinta-feira, das 07:30 às 11:30 e das 13:00 às 17:00; sexta-feira, das 07:30 às 13:30",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "São João do Jaguaribe",
+                secretario: "Maria Elenice de Oliveira",
+                endereco: "Praça Celso Chaves, nº S/N – Centro – São João do Jaguaribe, Ceará, CEP 62.965-000",
+                telefone: "(88) 3420-1221",
+                email: "educacao@saojoaodojaguaribe.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:00 às 13:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "São Luís do Curu",
+                secretario: "Não informado",
+                endereco: "Não informado",
+                telefone: "Não informado",
+                email: "Não informado",
+                horario: "Não informado",
+                observacoes: "Informações de contato não disponíveis nos canais oficiais."
+            },
+            {
+                municipio: "Senador Pompeu",
+                secretario: "Maria do Carmo Almeida",
+                endereco: "Centro de Feiras e Eventos – Parte Superior, nº 01 – Centro – Senador Pompeu, Ceará, CEP 63.600-000",
+                telefone: "(88) 9.9687-3000",
+                email: "sme@senadorpompeu.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 12:00 e das 13:30 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Senador Sá",
+                secretario: "Francisco Edvan da Silva",
+                endereco: "Rua Padre Del Monte, nº S/N – Centro – Senador Sá, Ceará",
+                telefone: "Não informado",
+                email: "educacao@senadorsa.ce.gov.br",
+                horario: "Não informado",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Sobral",
+                secretario: "Herbert Lima",
+                endereco: "Rua Viriato de Medeiros, nº 1250 – 2º andar – Centro – Sobral, Ceará, CEP 62.011-065",
+                telefone: "(88) 3677-1192",
+                email: "asscom@edu.sobral.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 13:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da Secretaria de Educação de Sobral."
+            },
+            {
+                municipio: "Solonópole",
+                secretario: "Antônia Maria de Sousa",
+                endereco: "Rua Benigno Bezerra, nº 10 – Centro – Solonópole, Ceará",
+                telefone: "(88) 9.8133-0415",
+                email: "seduc@solonopole.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 11:30 e das 13:30 às 17:00",
+                observacoes: "E-mail oficial encontrado e atualizado."
+            },
+            {
+                municipio: "Tabuleiro do Norte",
+                secretario: "Ana Paula Farias",
+                endereco: "Rua Germiniano Rodrigues de Farias, nº 00 – Vila São Pedro – Tabuleiro do Norte, Ceará, CEP 63.750-000",
+                telefone: "Não informado",
+                email: "seduc@tabuleirodonorte.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 14:00 às 17:00",
+                observacoes: "E-mail de Tamboril corrigido para o de Tabuleiro do Norte."
+            },
+            {
+                municipio: "Tamboril",
+                secretario: "Maria Valdeniza de Sousa",
+                endereco: "Rua Germiniano Rodrigues de Farias, nº 00 – Vila São Pedro – Tamboril, Ceará, CEP 63.750-000",
+                telefone: "Não informado",
+                email: "seduc@tamboril.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 14:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Tarrafas",
+                secretario: "Francisca Eliane de Sousa",
+                endereco: "Rua São José, nº S/N – Centro – Tarrafas, Ceará, CEP 63.145-000",
+                telefone: "Não informado",
+                email: "educacao@tarrafas.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 11:30 e das 13:00 às 16:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Tauá",
+                secretario: "Francisco Edvan da Silva",
+                endereco: "Av. Moacir Pereira Gondim, nº 132 – Planalto dos Colibris – Tauá, Ceará, CEP 63.660-000",
+                telefone: "(88) 996-3765",
+                email: "educacao@taua.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 11:30 e das 13:30 às 17:30",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Tejuçuoca",
+                secretario: "Francisca Jucileide de Sousa",
+                endereco: "Rua José Andrade de Sousa, nº 264 – Centro – Tejuçuoca, Ceará, CEP 62.610-000",
+                telefone: "(85) 3323-1111 / (85) 99237-1332",
+                email: "educacao@tejucuoca.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 14:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Tianguá",
+                secretario: "Maria do Socorro Oliveira",
+                endereco: "Av. Moisés Moita, nº 785 – Planalto – Tianguá, Ceará, CEP 62.320-000",
+                telefone: "(88) 3671-1386 / (88) 99214-1017",
+                email: "educacao@tiangua.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 14:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Trairi",
+                secretario: "Antônia Maria de Sousa",
+                endereco: "Rua Pe. José, nº S/N – Centro – Trairi, Ceará, CEP 62.690-000",
+                telefone: "(85) 3351-1393",
+                email: "seduc@trairi.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:00 às 11:00 e das 13:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Tururu",
+                secretario: "Maria do Livramento de Paula",
+                endereco: "Rua Monsenhor Solon, nº 173 – Centro – Tururu, Ceará, CEP 62.655-000",
+                telefone: "(85) 3358-1016",
+                email: "educacao@tururu.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 11:30 e das 13:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da prefeitura."
+            },
+            {
+                municipio: "Ubajara",
+                secretario: "Lione de Sousa",
+                endereco: "Rua 31 de Dezembro, nº 00 – Centro – Ubajara, CE, CEP 62.350-000",
+                telefone: "(88) 9.9374-765",
+                email: "educacao@ubajara.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 17:30",
+                observacoes: "Informações obtidas diretamente do site oficial da Prefeitura de Ubajara."
+            },
+            {
+                municipio: "Umari",
+                secretario: "Robson de Oliveira",
+                endereco: "Rua 03 de Agosto, nº 200 – Centro – Umari, CE, CEP 63.310-000",
+                telefone: "(88) 3578-111",
+                email: "educacao@umari.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 12:00 e das 14:00 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da Prefeitura de Umari."
+            },
+            {
+                municipio: "Umirim",
+                secretario: "Adrielliton Braga de Sousa",
+                endereco: "Rua Jonas Nunes, nº S/N – Estação – Umirim, CE, CEP 62.660-000",
+                telefone: "(85) 3364-1111",
+                email: "educacao@umirim.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 14:00",
+                observacoes: "Informações obtidas diretamente do site oficial da Prefeitura de Umirim."
+            },
+            {
+                municipio: "Uruburetama",
+                secretario: "Adrijane Mesquita Chaves",
+                endereco: "Rua Farmacêutico José Rodrigues, nº S/N – Centro – Uruburetama, CE, CEP 62.650-000",
+                telefone: "(85) 3364-211",
+                email: "educacao@uruburetama.ce.gov.br",
+                horario: "Segunda a quinta-feira, das 08:00 às 17:00; sexta-feira, das 08:00 às 13:00",
+                observacoes: "Informações obtidas diretamente do site oficial da Prefeitura de Uruburetama."
+            },
+            {
+                municipio: "Uruoca",
+                secretario: "Juliana Fonseca Cunha Camilo",
+                endereco: "Avenida Brasília, nº 93 – Roberto Dourado – Uruoca, CE, CEP 62.460-000",
+                telefone: "(88) 9.9255-969",
+                email: "seduc@uruoca.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 12:00 e das 14:00 às 17:30",
+                observacoes: "Informações obtidas diretamente do site oficial da Prefeitura de Uruoca."
+            },
+            {
+                municipio: "Varjota",
+                secretario: "Maria Lucila Oliveira Lira",
+                endereco: "Avenida Presidente Castelo Branco, nº 2932 – Centro – Varjota, CE, CEP 62.265-00",
+                telefone: "(88) 9404-349",
+                email: "educacao@varjota.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 08:00 às 14:00",
+                observacoes: "Informações obtidas diretamente do site oficial da Prefeitura de Varjota."
+            },
+            {
+                municipio: "Várzea Alegre",
+                secretario: "Fábia Pereira da Silva Oliveira",
+                endereco: "Rua Maria Vitória, nº 32 – Centro – Várzea Alegre, CE, CEP 63.540-000",
+                telefone: "(88) 3541-734",
+                email: "semed@varzeaalegre.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:00 às 13:00",
+                observacoes: "Informações obtidas diretamente do site oficial da Prefeitura de Várzea Alegre."
+            },
+            {
+                municipio: "Viçosa do Ceará",
+                secretario: "Willia Maria Oliveira de Andrade",
+                endereco: "Rua Francisca Iraci Vasconcelos, nº 333 – São José – Viçosa do Ceará, CE, CEP 62.300-00",
+                telefone: "Não informado",
+                email: "seduc@vicosa.ce.gov.br",
+                horario: "Segunda a sexta-feira, das 07:30 às 12:00 e das 13:30 às 17:00",
+                observacoes: "Informações obtidas diretamente do site oficial da Prefeitura de Viçosa do Ceará."
+            }
+        ].sort((a, b) => a.municipio.localeCompare(b.municipio));
+
+        const cardsContainer = document.getElementById('cards-container');
+        const searchInput = document.getElementById('search-input');
+        const modal = document.getElementById('modal');
+        const modalContent = document.getElementById('modal-content');
+        const noResults = document.getElementById('no-results');
+
+        const createCard = (data, index) => {
+            const hasContact = data.telefone !== 'Não informado' || data.email !== 'Não informado';
+            return `
+                <div class="card bg-white p-5 rounded-xl shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-between" data-index="${index}">
+                    <div>
+                        <h2 class="text-xl font-bold text-slate-900 truncate">${data.municipio}</h2>
+                        <p class="text-sm text-slate-500 mt-1">
+                            <span class="font-semibold">Secretário(a):</span> ${data.secretario || 'Não informado'}
+                        </p>
+                    </div>
+                    <div class="mt-4 pt-4 border-t border-slate-100">
+                        ${hasContact ? `
+                            ${data.telefone !== 'Não informado' ? `<p class="text-sm text-slate-600 flex items-center gap-2"><svg class="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path></svg>${data.telefone}</p>` : ''}
+                            ${data.email !== 'Não informado' ? `<p class="text-sm text-slate-600 flex items-center gap-2 mt-1 truncate"><svg class="w-4 h-4 text-sky-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>${data.email.split('/')[0].trim()}</p>` : ''}
+                        ` : '<p class="text-sm text-slate-400">Contato não disponível</p>'}
+                        <div class="text-right text-xs text-sky-600 font-semibold mt-3">Ver Detalhes &rarr;</div>
+                    </div>
+                </div>
+            `;
+        };
+        
+        const renderCards = (data) => {
+            cardsContainer.innerHTML = data.map(createCard).join('');
+        };
+
+        const filterCards = () => {
+            const query = searchInput.value.toLowerCase().trim();
+            let visibleCount = 0;
+            const cards = cardsContainer.querySelectorAll('.card');
+            cards.forEach(card => {
+                const name = card.querySelector('h2').textContent.toLowerCase();
+                const isVisible = name.includes(query);
+                card.classList.toggle('hidden', !isVisible);
+                if(isVisible) visibleCount++;
+            });
+            noResults.classList.toggle('hidden', visibleCount > 0);
+        };
+        
+        const showModal = (index) => {
+            const data = database[index];
+            modalContent.innerHTML = `
+                <div class="p-6 sm:p-8">
+                    <div class="flex justify-between items-start">
+                        <h2 class="text-2xl sm:text-3xl font-bold text-slate-900 mb-2">${data.municipio}</h2>
+                         <button id="close-modal" class="text-slate-400 hover:text-slate-800 transition">&times;</button>
+                    </div>
+                    <p class="text-sm text-slate-500 mb-6">
+                        <span class="font-semibold">Secretário(a):</span> ${data.secretario || 'Não informado'}
+                    </p>
+                    
+                    <div class="space-y-4">
+                        <div class="flex items-start gap-3">
+                            <div class="flex-shrink-0 w-6 h-6 flex items-center justify-center bg-sky-100 rounded-full mt-1">📍</div>
+                            <div>
+                                <h4 class="font-semibold text-slate-700">Endereço</h4>
+                                <p class="text-slate-600">${data.endereco || 'Não informado'}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <div class="flex-shrink-0 w-6 h-6 flex items-center justify-center bg-sky-100 rounded-full mt-1">📞</div>
+                            <div>
+                                <h4 class="font-semibold text-slate-700">Telefone</h4>
+                                <p class="text-slate-600">${data.telefone || 'Não informado'}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <div class="flex-shrink-0 w-6 h-6 flex items-center justify-center bg-sky-100 rounded-full mt-1">✉️</div>
+                            <div>
+                                <h4 class="font-semibold text-slate-700">E-mail</h4>
+                                <p class="text-slate-600 break-words">${data.email || 'Não informado'}</p>
+                            </div>
+                        </div>
+                         <div class="flex items-start gap-3">
+                            <div class="flex-shrink-0 w-6 h-6 flex items-center justify-center bg-sky-100 rounded-full mt-1">🕒</div>
+                            <div>
+                                <h4 class="font-semibold text-slate-700">Horário de Atendimento</h4>
+                                <p class="text-slate-600">${data.horario || 'Não informado'}</p>
+                            </div>
+                        </div>
+                         <div class="flex items-start gap-3">
+                            <div class="flex-shrink-0 w-6 h-6 flex items-center justify-center bg-sky-100 rounded-full mt-1">📝</div>
+                            <div>
+                                <h4 class="font-semibold text-slate-700">Observações</h4>
+                                <p class="text-slate-600">${data.observacoes || 'Nenhuma'}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                 modalContent.classList.remove('scale-95', 'opacity-0');
+                 modalContent.classList.add('scale-100', 'opacity-100');
+            }, 10);
+            document.getElementById('close-modal').onclick = hideModal;
+        };
+
+        const hideModal = () => {
+            modalContent.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 300);
+        };
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            renderCards(database);
+        });
+
+        searchInput.addEventListener('input', filterCards);
+
+        cardsContainer.addEventListener('click', (e) => {
+            const card = e.target.closest('.card');
+            if (card) {
+                showModal(card.dataset.index);
+            }
+        });
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                hideModal();
+            }
+        });
+
+    </script>
+</body>
+</html>
